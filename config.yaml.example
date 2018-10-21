@@ -1,0 +1,32 @@
+# wow_path: C:/lzf/World of Warcraft
+wow_path: E:/fakewow
+addons:
+  - https://wow.curseforge.com/projects/tellmewhen
+  - https://wow.curseforge.com/projects/deadly-boss-mods
+  - https://wow.curseforge.com/projects/dbm-voicepack-yike
+  - https://wow.curseforge.com/projects/pawn
+  - https://wow.curseforge.com/projects/altoholic
+  - https://wow.curseforge.com/projects/datastore
+  - https://wow.curseforge.com/projects/datastore_achievements
+  - https://wow.curseforge.com/projects/datastore_agenda
+  - https://wow.curseforge.com/projects/datastore_auctions
+  - https://wow.curseforge.com/projects/datastore_characters
+  - https://wow.curseforge.com/projects/datastore_containers
+  - https://wow.curseforge.com/projects/datastore_crafts
+  - https://wow.curseforge.com/projects/datastore_currencies
+  - https://wow.curseforge.com/projects/datastore_garrisons
+  - https://wow.curseforge.com/projects/datastore_inventory
+  - https://wow.curseforge.com/projects/datastore_mails
+  - https://wow.curseforge.com/projects/datastore_pets
+  - https://wow.curseforge.com/projects/datastore_quests
+  - https://wow.curseforge.com/projects/datastore_reputations
+  - https://wow.curseforge.com/projects/datastore_spells
+  - https://wow.curseforge.com/projects/datastore_stats
+  - https://wow.curseforge.com/projects/datastore_talents
+  - https://wow.curseforge.com/projects/battle_pet_breedid
+  - https://wow.curseforge.com/projects/hpetbattleany
+  - https://wow.curseforge.com/projects/auctionator
+  - https://wow.curseforge.com/projects/bagnon
+  - https://www.wowace.com/projects/range-display
+  - https://www.wowace.com/projects/skada
+  - https://www.wowace.com/projects/rarity

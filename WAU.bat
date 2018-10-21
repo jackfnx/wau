@@ -1,0 +1,2 @@
+python WAU.py
+pause
