@@ -5,8 +5,6 @@ import os
 import sys
 import requests
 import zipfile
-import random
-import time
 from bs4 import BeautifulSoup
 from contextlib import closing
 
@@ -16,21 +14,9 @@ CONFIG_FILE = 'config.yaml'
 TEMP_FOLDER = 'temp_download'
 
 class Addon:
-
-    @staticmethod
-    def extract_host(url):
-        if url.startswith('https://wow.curseforge.com/projects'):
-            return 'https://wow.curseforge.com'
-        elif url.startswith('https://www.curseforge.com/wow/addons'):
-            return 'https://www.curseforge.com'
-        elif url.startswith('https://www.wowace.com/projects'):
-            return 'https://www.wowace.com'
-        else:
-            raise 'Unknown host'
-
     def __init__(self, url):
         self.url = url
-        self.host = self.extract_host(url)
+        self.host = 'https://wow.curseforge.com' if 'curseforge' in url else 'https://www.wowace.com'
         self.href = None
         self.timestamp = 0
         self.id = 0
@@ -39,7 +25,6 @@ class Addon:
     
     def __repr__(self):
         return '<Addon: %s, [%s], need_update: %s>' % (self.name, self.url, self.need_update)
-
 
 def load_config():
     with open(CONFIG_FILE) as f:
@@ -96,16 +81,6 @@ class ProgressBar(object):
 
 
 
-def jump_url(jump_page):
-
-    response = requests.get(jump_page)
-    html = response.text
-
-    soup = BeautifulSoup(html, 'html5lib')
-    url = soup.select('.download__link')[0]['href']
-    return url
-
-
 def get_page(url):
     obj = Addon(url)
     
@@ -113,17 +88,10 @@ def get_page(url):
     html = response.text
     
     soup = BeautifulSoup(html, 'html5lib')
-    if obj.host == 'https://www.curseforge.com':
-        jump_page = soup.select('.button--download')[0]['href']
-        obj.href = jump_url(obj.host + jump_page)
-        obj.id = int(random.random() * 10000)
-        obj.name = soup.select('[itemprop="title"]')[3].text
-        obj.timestamp = soup.select('.tip.standard-date.standard-datetime')[0]['data-epoch']
-    else:
-        obj.href = soup.select('.fa-icon-download')[0]['href']
-        obj.id = soup.select('.info-data')[0].text
-        obj.name = soup.select('.overflow-tip')[0].text
-        obj.timestamp = soup.select('.tip.standard-date.standard-datetime')[1]['data-epoch']
+    obj.href = soup.select('.fa-icon-download')[0]['href']
+    obj.timestamp = soup.select('.tip.standard-date.standard-datetime')[1]['data-epoch']
+    obj.id = soup.select('.info-data')[0].text
+    obj.name = soup.select('.overflow-tip')[0].text
     obj.need_update = True
     return obj
 
