@@ -13,6 +13,12 @@ SAVED_FILE = 'saved.pickle'
 CONFIG_FILE = 'config.yaml'
 TEMP_FOLDER = 'temp_download'
 
+# proxy = {
+#     "http": "http://127.0.0.1:8080",
+#     "https": "https://127.0.0.1:8080"
+# }
+proxy = None
+
 class Addon:
     def __init__(self, url):
         self.url = url
@@ -84,7 +90,7 @@ class ProgressBar(object):
 def get_page(url):
     obj = Addon(url)
     
-    response = requests.get(url)
+    response = requests.get(url, proxies=proxy)
     html = response.text
     
     soup = BeautifulSoup(html, 'html5lib')
@@ -99,7 +105,7 @@ def get_page(url):
 def download(addon, temp_path):
     url = addon.host + addon.href
     print("【%s】%s" % (addon.name, url))
-    with closing(requests.get(url, stream=True)) as response:
+    with closing(requests.get(url, stream=True, proxies=proxy)) as response:
         chunk_size = 1024 # 单次请求最大值
         content_size = int(response.headers['content-length']) # 内容体总大小
         progress = ProgressBar(addon.name, total=content_size,
