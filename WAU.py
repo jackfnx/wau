@@ -150,7 +150,7 @@ def main():
 
     for addon in new_addons:
         temp_path = os.path.join('temp_download', '%s.zip' % addon.id)
-        dest_path = os.path.join(config['wow_path'], 'Interface', 'addons')
+        dest_path = os.path.join(config['wow_path'], '_retail_',  'Interface', 'addons')
         if addon.need_update:
             try:
                 download(addon, temp_path)
