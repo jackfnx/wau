@@ -7,22 +7,27 @@ import requests
 import zipfile
 from bs4 import BeautifulSoup
 from contextlib import closing
+from datetime import datetime
+
 
 SCRIPT_NAME = 'WoW Addons Updater'
 SAVED_FILE = 'saved.pickle'
 CONFIG_FILE = 'config.yaml'
 TEMP_FOLDER = 'temp_download'
 
-# proxy = {
-#     "http": "http://127.0.0.1:8080",
-#     "https": "https://127.0.0.1:8080"
-# }
-proxy = None
+proxy = {
+    "http": "http://127.0.0.1:8080",
+    "https": "https://127.0.0.1:8080"
+}
+# proxy = None
 
 class Addon:
     def __init__(self, url):
         self.url = url
-        self.host = 'https://wow.curseforge.com' if 'curseforge' in url else 'https://www.wowace.com'
+        if 'curseforge' in url:
+            self.host = 'https://www.curseforge.com'
+        elif 'wowace' in url:
+            self.host = 'https://www.wowace.com'
         self.href = None
         self.timestamp = 0
         self.id = 0
@@ -92,13 +97,26 @@ def get_page(url):
     
     response = requests.get(url, proxies=proxy)
     html = response.text
-    
-    soup = BeautifulSoup(html, 'html5lib')
-    obj.href = soup.select('.fa-icon-download')[0]['href']
-    obj.timestamp = soup.select('.tip.standard-date.standard-datetime')[1]['data-epoch']
-    obj.id = soup.select('.info-data')[0].text
-    obj.name = soup.select('.overflow-tip')[0].text
-    obj.need_update = True
+        
+    if obj.host == "https://www.wowace.com":
+        soup = BeautifulSoup(html, 'html5lib')
+        obj.href = soup.select('.fa-icon-download')[0]['href']
+        obj.timestamp = soup.select('.tip.standard-date.standard-datetime')[1]['data-epoch']
+        obj.id = soup.select('.info-data')[0].text
+        obj.name = soup.select('.overflow-tip')[0].text
+        obj.need_update = True
+    elif obj.host == "https://www.curseforge.com":
+        soup = BeautifulSoup(html, 'html5lib')
+        raw_url = soup.select('article a')[0]['href']
+        obj.href = raw_url.replace('/files/', '/download/') + '/file'
+        tm_pack = soup.select('.w-full.flex.justify-between')[2]
+        tm_text = tm_pack.select('span')[1].text
+        tm = datetime.strptime(tm_text, '%b %d, %Y')
+        obj.timestamp = int(tm.timestamp())
+        id_pack = soup.select('.w-full.flex.justify-between')[0]
+        obj.id = id_pack.select('span')[1].text
+        obj.name = soup.select('h2.font-bold.text-lg.break-all')[0].text
+        obj.need_update = True
     return obj
 
 
