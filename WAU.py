@@ -107,16 +107,20 @@ def get_page(url):
         obj.need_update = True
     elif obj.host == "https://www.curseforge.com":
         soup = BeautifulSoup(html, 'html5lib')
-        raw_url = soup.select('article a')[0]['href']
-        obj.href = raw_url.replace('/files/', '/download/') + '/file'
-        tm_pack = soup.select('.w-full.flex.justify-between')[2]
-        tm_text = tm_pack.select('span')[1].text
-        tm = datetime.strptime(tm_text, '%b %d, %Y')
-        obj.timestamp = int(tm.timestamp())
-        id_pack = soup.select('.w-full.flex.justify-between')[0]
-        obj.id = id_pack.select('span')[1].text
-        obj.name = soup.select('h2.font-bold.text-lg.break-all')[0].text
-        obj.need_update = True
+        table = soup.select('.listing.listing-project-file.project-file-listing.b-table.b-table-a')[0]
+        trs = table.select('tbody tr')
+        for tr in trs:
+            title = tr.select('a')[0].text
+            if 'classic' in title:
+                print('<%s> bypass' % title)
+                continue
+            raw_url = tr.select('a')[0]['href']
+            obj.href = raw_url.replace('/files/', '/download/') + '/file'
+            obj.timestamp = tr.select('abbr')[0]['data-epoch']
+            id_pack = soup.select('.w-full.flex.justify-between')[0]
+            obj.id = id_pack.select('span')[1].text
+            obj.name = soup.select('h2.font-bold.text-lg.break-all')[0].text
+            obj.need_update = True
     return obj
 
 
