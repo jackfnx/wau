@@ -24,10 +24,11 @@ proxy = {
 class Addon:
     def __init__(self, url):
         self.url = url
-        if 'curseforge' in url:
+        if url.startswith('https://www.curseforge.com'):
             self.host = 'https://www.curseforge.com'
-        elif 'wowace' in url:
+        elif url.startswith('https://www.wowace.com'):
             self.host = 'https://www.wowace.com'
+        self.version = ''
         self.href = None
         self.timestamp = 0
         self.id = 0
@@ -100,6 +101,7 @@ def get_page(url):
         
     if obj.host == "https://www.wowace.com":
         soup = BeautifulSoup(html, 'html5lib')
+        obj.version = ''
         obj.href = soup.select('.fa-icon-download')[0]['href']
         obj.timestamp = soup.select('.tip.standard-date.standard-datetime')[1]['data-epoch']
         obj.id = soup.select('.info-data')[0].text
@@ -107,6 +109,7 @@ def get_page(url):
         obj.need_update = True
     elif obj.host == "https://www.curseforge.com":
         soup = BeautifulSoup(html, 'html5lib')
+        obj.version = soup.select('article a')[0].text.strip()
         raw_url = soup.select('article a')[0]['href']
         obj.href = raw_url.replace('/files/', '/download/') + '/file'
         tm_pack = soup.select('.w-full.flex.justify-between')[2]
@@ -151,9 +154,12 @@ def main():
             new_addon = get_page(url)
             if old_addon and old_addon.timestamp == new_addon.timestamp and not old_addon.need_update:
                 new_addon.need_update = False
-                print('【%s】，无更新' % new_addon.name)
+                print('【%s】(%s)，无更新' % (new_addon.name, new_addon.version))
+            elif 'classic' in new_addon.version:
+                new_addon.need_update = False
+                print('【%s】(%s)，跳过怀旧服版本' % (new_addon.name, new_addon.version))
             else:
-                print('【%s】，有更新' % new_addon.name)
+                print('【%s】(%s)，有更新' % (new_addon.name, new_addon.version))
         except requests.exceptions.RequestException as e:
             if old_addon:
                 new_addon = old_addon
