@@ -11,8 +11,6 @@ from datetime import datetime
 
 
 SCRIPT_NAME = 'WoW Addons Updater'
-SAVED_FILE = 'saved.pickle'
-CONFIG_FILE = 'config.yaml'
 TEMP_FOLDER = 'temp_download'
 
 proxy = {
@@ -38,17 +36,17 @@ class Addon:
     def __repr__(self):
         return '<Addon: %s, [%s], need_update: %s>' % (self.name, self.url, self.need_update)
 
-def load_config():
-    with open(CONFIG_FILE) as f:
+def load_config(config_file):
+    with open(config_file) as f:
         return yaml.load(f)
-    
-def save_status(addons):
-    with open(SAVED_FILE, 'wb') as f:
+
+def save_status(addons, saved_file):
+    with open(saved_file, 'wb') as f:
         pickle.dump(addons, f)
 
-def load_status():
-    if os.path.exists(SAVED_FILE):
-        with open(SAVED_FILE, 'rb') as f:
+def load_status(saved_file):
+    if os.path.exists(saved_file):
+        with open(saved_file, 'rb') as f:
             addons = pickle.load(f)
     else:
         addons = []
@@ -93,7 +91,7 @@ class ProgressBar(object):
 
 
 
-def get_page(url):
+def get_page(url, wow_version):
     obj = Addon(url)
     
     response = requests.get(url, proxies=proxy)
@@ -101,7 +99,7 @@ def get_page(url):
         
     if obj.host == "https://www.wowace.com":
         soup = BeautifulSoup(html, 'html5lib')
-        obj.version = ''
+        obj.version = soup.select('.project-file-name-container')[0].text.strip()
         obj.href = soup.select('.fa-icon-download')[0]['href']
         obj.timestamp = soup.select('.tip.standard-date.standard-datetime')[1]['data-epoch']
         obj.id = soup.select('.info-data')[0].text
@@ -109,15 +107,32 @@ def get_page(url):
         obj.need_update = True
     elif obj.host == "https://www.curseforge.com":
         soup = BeautifulSoup(html, 'html5lib')
-        obj.version = soup.select('article a')[0].text.strip()
-        raw_url = soup.select('article a')[0]['href']
-        obj.href = raw_url.replace('/files/', '/download/') + '/file'
-        tm_pack = soup.select('.w-full.flex.justify-between')[2]
-        tm_text = tm_pack.select('span')[1].text
-        tm = datetime.strptime(tm_text, '%b %d, %Y')
-        obj.timestamp = int(tm.timestamp())
-        id_pack = soup.select('.w-full.flex.justify-between')[0]
-        obj.id = id_pack.select('span')[1].text
+
+        if wow_version == 'wow':
+            raw_url = soup.select('.button.button--icon-only.button--sidebar')[0]['href']
+            timestamp = soup.select('.tip.standard-date.standard-datetime')[2]['data-epoch']
+        elif wow_version == 'wowclassic':
+            wowversioncount = len(soup.select('.e-sidebar-subheader.overflow-tip.mb-1'))
+            if wowversioncount == 2: #include classic
+                raw_url = soup.select('.button.button--icon-only.button--sidebar')[1]['href']
+                timestamp = soup.select('.tip.standard-date.standard-datetime')[3]['data-epoch']
+            elif wowversioncount==1: #only classic
+                wowversionstring = soup.select('.e-sidebar-subheader.overflow-tip.mb-1').select('a')[0].text().trim()
+                if wowversionstring == 'WoW Classic':
+                    raw_url = soup.select('.button.button--icon-only.button--sidebar')[0]['href']
+                    timestamp = soup.select('.tip.standard-date.standard-datetime')[2]['data-epoch']
+                else:
+                    return None
+            else:
+                return None
+        else:
+            return None
+
+        ver_obj = soup.select('.overflow-tip.truncate')[0]
+        obj.version = ver_obj.text
+        obj.href = raw_url + '/file'
+        obj.timestamp = int(timestamp)
+        obj.id = ver_obj['data-id']
         obj.name = soup.select('h2.font-bold.text-lg.break-all')[0].text
         obj.need_update = True
     return obj
@@ -138,9 +153,9 @@ def download(addon, temp_path):
 
 
 
-def main():
-    config = load_config()
-    addons = load_status()
+def main(config_file):
+    config = load_config(config_file)
+    addons = load_status(config['saved_file'])
 
     new_addons = []
     for url in config['addons']:
@@ -151,15 +166,17 @@ def main():
             old_addon = None
 
         try:
-            new_addon = get_page(url)
-            if old_addon and old_addon.timestamp == new_addon.timestamp and not old_addon.need_update:
-                new_addon.need_update = False
-                print('【%s】(%s)，无更新' % (new_addon.name, new_addon.version))
-            elif 'classic' in new_addon.version:
-                new_addon.need_update = False
-                print('【%s】(%s)，跳过怀旧服版本' % (new_addon.name, new_addon.version))
+            new_addon = get_page(url, config['wow_version'])
+            if not new_addon:
+                print('【%s】找不到版本' % new_addon.name)
+            elif old_addon:
+                if old_addon.timestamp == new_addon.timestamp and not old_addon.need_update:
+                    new_addon.need_update = False
+                    print('【%s】，无更新' % (new_addon.name))
+                else:
+                    print('【%s】，有更新 (%s -> %s)' % (new_addon.name, old_addon.version, new_addon.version))
             else:
-                print('【%s】(%s)，有更新' % (new_addon.name, new_addon.version))
+                print('【%s】，有更新 (<None> -> %s)' % (new_addon.name, new_addon.version))
         except requests.exceptions.RequestException as e:
             if old_addon:
                 new_addon = old_addon
@@ -174,7 +191,7 @@ def main():
 
     for addon in new_addons:
         temp_path = os.path.join('temp_download', '%s.zip' % addon.id)
-        dest_path = os.path.join(config['wow_path'], '_retail_',  'Interface', 'addons')
+        dest_path = os.path.join(config['wow_path'], 'Interface', 'addons')
         if addon.need_update:
             try:
                 download(addon, temp_path)
@@ -182,14 +199,15 @@ def main():
                     zip_ref.extractall(dest_path)
                 print('【%s】更新完成' % addon.name)
                 addon.need_update = False
-                save_status(new_addons)
+                save_status(new_addons, config['saved_file'])
             except requests.exceptions.RequestException as e:
                 sys.stderr.write('Error: %s\n' % str(e))
 
-    save_status(new_addons)
+    save_status(new_addons, config['saved_file'])
     print('插件更新完成.')
 
 
 if __name__=='__main__':
     print('【%s】脚本启动' % SCRIPT_NAME)
-    main()
+    config_file = 'wow.yaml'
+    main(config_file)
