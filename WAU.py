@@ -111,16 +111,19 @@ def get_page(url, wow_version):
         if wow_version == 'wow':
             raw_url = soup.select('.button.button--icon-only.button--sidebar')[0]['href']
             timestamp = soup.select('.tip.standard-date.standard-datetime')[2]['data-epoch']
+            ver_obj = soup.select('.overflow-tip.truncate')[0]
         elif wow_version == 'wowclassic':
             wowversioncount = len(soup.select('.e-sidebar-subheader.overflow-tip.mb-1'))
             if wowversioncount == 2: #include classic
                 raw_url = soup.select('.button.button--icon-only.button--sidebar')[1]['href']
                 timestamp = soup.select('.tip.standard-date.standard-datetime')[3]['data-epoch']
+                ver_obj = soup.select('.overflow-tip.truncate')[1]
             elif wowversioncount==1: #only classic
                 wowversionstring = soup.select('.e-sidebar-subheader.overflow-tip.mb-1').select('a')[0].text().trim()
                 if wowversionstring == 'WoW Classic':
                     raw_url = soup.select('.button.button--icon-only.button--sidebar')[0]['href']
                     timestamp = soup.select('.tip.standard-date.standard-datetime')[2]['data-epoch']
+                    ver_obj = soup.select('.overflow-tip.truncate')[0]
                 else:
                     return None
             else:
@@ -128,7 +131,6 @@ def get_page(url, wow_version):
         else:
             return None
 
-        ver_obj = soup.select('.overflow-tip.truncate')[0]
         obj.version = ver_obj.text
         obj.href = raw_url + '/file'
         obj.timestamp = int(timestamp)
@@ -168,7 +170,8 @@ def main(config_file):
         try:
             new_addon = get_page(url, config['wow_version'])
             if not new_addon:
-                print('【%s】找不到版本' % new_addon.name)
+                print('【%s】，找不到插件' % url)
+                continue
             elif old_addon:
                 if old_addon.timestamp == new_addon.timestamp and not old_addon.need_update:
                     new_addon.need_update = False
@@ -209,5 +212,5 @@ def main(config_file):
 
 if __name__=='__main__':
     print('【%s】脚本启动' % SCRIPT_NAME)
-    config_file = 'wow.yaml'
+    config_file = sys.argv[1] if len(sys.argv) > 1 else 'wow.yaml'
     main(config_file)

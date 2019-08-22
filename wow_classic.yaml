@@ -1,0 +1,7 @@
+wow_version: wowclassic
+wow_path: C:/lzf/World of Warcraft/_classic_
+saved_file: wow_classic.pickle
+addons:
+  - https://www.curseforge.com/wow/addons/deadly-boss-mods
+  - https://www.curseforge.com/wow/addons/dbm-voicepack-yike
+  # - https://www.wowace.com/projects/range-display
