@@ -119,7 +119,7 @@ def get_page(url, wow_version):
                 timestamp = soup.select('.tip.standard-date.standard-datetime')[3]['data-epoch']
                 ver_obj = soup.select('.overflow-tip.truncate')[1]
             elif wowversioncount==1: #only classic
-                wowversionstring = soup.select('.e-sidebar-subheader.overflow-tip.mb-1').select('a')[0].text().trim()
+                wowversionstring = soup.select('.e-sidebar-subheader.overflow-tip.mb-1')[0].text.strip()
                 if wowversionstring == 'WoW Classic':
                     raw_url = soup.select('.button.button--icon-only.button--sidebar')[0]['href']
                     timestamp = soup.select('.tip.standard-date.standard-datetime')[2]['data-epoch']
