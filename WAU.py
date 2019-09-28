@@ -1,8 +1,8 @@
 # coding: utf-8
-import yaml
-import pickle
 import os
 import sys
+import yaml
+import pickle
 import requests
 import zipfile
 from bs4 import BeautifulSoup
