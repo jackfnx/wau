@@ -11,7 +11,7 @@ from datetime import datetime
 
 
 SCRIPT_NAME = 'WoW Addons Updater'
-TEMP_FOLDER = 'temp_download'
+TEMP_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'temp_download')
 
 proxy = {
     "http": "http://127.0.0.1:8080",
@@ -193,7 +193,7 @@ def main(config_file):
         os.makedirs(TEMP_FOLDER)
 
     for addon in new_addons:
-        temp_path = os.path.join('temp_download', '%s.zip' % addon.id)
+        temp_path = os.path.join(TEMP_FOLDER, '%s.zip' % addon.id)
         dest_path = os.path.join(config['wow_path'], 'Interface', 'addons')
         if addon.need_update:
             try:
