@@ -1,6 +1,8 @@
 # coding: utf-8
 import os
+import shutil
 import sys
+import time
 import yaml
 import pickle
 import requests
@@ -8,6 +10,10 @@ import zipfile
 from bs4 import BeautifulSoup
 from contextlib import closing
 from datetime import datetime
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.remote.remote_connection import LOGGER
+import logging
 
 
 SCRIPT_NAME = 'WoW Addons Updater'
@@ -18,6 +24,10 @@ proxy = {
     "https": "https://127.0.0.1:8080"
 }
 # proxy = None
+headers = {
+    'user-agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.132 Safari/537.36',
+    # 'referer': 'https://www.curseforge.com/wow/addons'
+}
 
 class Addon:
     def __init__(self, url):
@@ -90,13 +100,75 @@ class ProgressBar(object):
         print(self.__get_info(), end=end_str)
 
 
+class ChromeDriver:
+
+    def __init__(self):
+
+        LOGGER.setLevel(logging.CRITICAL)
+
+        chrome_options = Options()
+        # chrome_options.add_argument("--headless")
+        # chrome_options.set_headless()
+        chrome_options.add_argument("--proxy-server=http://127.0.0.1:8080")
+
+        self.browser_driver = webdriver.Chrome(executable_path=('C:/Program Files (x86)/Google/Chrome/Application/chromedriver.exe'), chrome_options=chrome_options)
+
+        chrome_options2 = Options()
+        # chrome_options2.add_argument("--headless")
+        chrome_options2.add_argument("--proxy-server=http://127.0.0.1:8080")
+        chrome_options2.add_experimental_option("prefs", {
+            "download.default_directory": TEMP_FOLDER,
+            "download.prompt_for_download": False,
+            "download.directory_upgrade": True,
+            "safebrowsing.enabled": True
+        })
+        self.download_driver = webdriver.Chrome(executable_path=('C:/Program Files (x86)/Google/Chrome/Application/chromedriver.exe'), chrome_options=chrome_options2)
+
+        for f in os.listdir(TEMP_FOLDER):
+            if f.endswith('.crdownload'):
+                last_cr = os.path.join(TEMP_FOLDER, f)
+                print('clear: %s' % last_cr)
+                os.unlink(last_cr)
+
+
+    def browser_to(self, url):
+        self.browser_driver.get(url)
+        html = self.browser_driver.find_element_by_xpath("//*").get_attribute("outerHTML")
+        # self.browser_driver.close()
+        return html
+
+    def download(self, addon, temp_path):
+        def wait_for_downloads_done():
+            while True:
+                if len([f for f in os.listdir(TEMP_FOLDER) if f.endswith(".crdownload") or f.endswith(".tmp")]) == 0:
+                    break
+                time.sleep(0.5)
+
+        url = addon.host + addon.href
+        print("【%s】%s" % (addon.name, url))
+        self.download_driver.get(url)
+        wait_for_downloads_done()
+        time.sleep(5)
+        filepath = max([os.path.join(TEMP_FOLDER, f) for f in os.listdir(TEMP_FOLDER)], key=os.path.getctime)
+        # print(filepath)
+        # print(os.listdir(TEMP_FOLDER))
+        # shutil.move(filepath, temp_path)
+        return filepath
+
+    def close(self):
+        self.browser_driver.close()
+        self.download_driver.close()
+
+
+chromeDriver = ChromeDriver()
+
 
 def get_page(url, wow_version):
     obj = Addon(url)
     
-    response = requests.get(url, proxies=proxy)
-    html = response.text
-        
+    # r = requests.get(url)#, proxies=proxy, headers=headers)
+    html = chromeDriver.browser_to(url)
+
     if obj.host == "https://www.wowace.com":
         soup = BeautifulSoup(html, 'html5lib')
         obj.version = soup.select('.project-file-name-container')[0].text.strip()
@@ -143,7 +215,7 @@ def get_page(url, wow_version):
 def download(addon, temp_path):
     url = addon.host + addon.href
     print("【%s】%s" % (addon.name, url))
-    with closing(requests.get(url, stream=True, proxies=proxy)) as response:
+    with closing(requests.Session().get(url, stream=True, proxies=proxy)) as response:
         chunk_size = 1024 # 单次请求最大值
         content_size = int(response.headers['content-length']) # 内容体总大小
         progress = ProgressBar(addon.name, total=content_size,
@@ -152,7 +224,6 @@ def download(addon, temp_path):
             for data in response.iter_content(chunk_size=chunk_size):
                 f.write(data)
                 progress.refresh(count=len(data))
-
 
 
 def main(config_file):
@@ -197,7 +268,8 @@ def main(config_file):
         dest_path = os.path.join(config['wow_path'], 'Interface', 'addons')
         if addon.need_update:
             try:
-                download(addon, temp_path)
+                temp_path = chromeDriver.download(addon, temp_path)
+                # download(addon, temp_path)
                 with zipfile.ZipFile(temp_path, 'r') as zip_ref:
                     zip_ref.extractall(dest_path)
                 print('【%s】更新完成' % addon.name)
@@ -209,6 +281,7 @@ def main(config_file):
     save_status(new_addons, config['saved_file'])
     print('插件更新完成.')
 
+    chromeDriver.close()
 
 if __name__=='__main__':
     print('【%s】脚本启动' % SCRIPT_NAME)
