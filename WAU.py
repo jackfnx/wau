@@ -5,6 +5,7 @@ import yaml
 import pickle
 import requests
 import zipfile
+import cfscrape
 from bs4 import BeautifulSoup
 from contextlib import closing
 from datetime import datetime
@@ -90,12 +91,19 @@ class ProgressBar(object):
         print(self.__get_info(), end=end_str)
 
 
+def req_get(url, stream=False):
+
+    scraper = cfscrape.create_scraper()
+    r = scraper.get(url, stream=stream)
+    # r = requests.get(url, stream=stream, proxies=proxy)
+    return r
+
 
 def get_page(url, wow_version):
     obj = Addon(url)
     
-    response = requests.get(url, proxies=proxy)
-    html = response.text
+    r = req_get(url)
+    html = r.text
         
     if obj.host == "https://www.wowace.com":
         soup = BeautifulSoup(html, 'html5lib')
@@ -143,7 +151,7 @@ def get_page(url, wow_version):
 def download(addon, temp_path):
     url = addon.host + addon.href
     print("【%s】%s" % (addon.name, url))
-    with closing(requests.get(url, stream=True, proxies=proxy)) as response:
+    with closing(req_get(url, stream=True)) as response:
         chunk_size = 1024 # 单次请求最大值
         content_size = int(response.headers['content-length']) # 内容体总大小
         progress = ProgressBar(addon.name, total=content_size,
