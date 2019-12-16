@@ -39,7 +39,7 @@ class Addon:
 
 def load_config(config_file):
     with open(config_file) as f:
-        return yaml.load(f)
+        return yaml.load(f, Loader=yaml.FullLoader)
 
 def save_status(addons, saved_file):
     with open(saved_file, 'wb') as f:
@@ -94,7 +94,7 @@ class ProgressBar(object):
 def req_get(url, stream=False):
 
     scraper = cfscrape.create_scraper()
-    r = scraper.get(url, stream=stream)
+    r = scraper.get(url, stream=stream, proxies=proxy)
     # r = requests.get(url, stream=stream, proxies=proxy)
     return r
 
@@ -104,7 +104,7 @@ def get_page(url, wow_version):
     
     r = req_get(url)
     html = r.text
-        
+
     if obj.host == "https://www.wowace.com":
         soup = BeautifulSoup(html, 'html5lib')
         obj.version = soup.select('.project-file-name-container')[0].text.strip()
